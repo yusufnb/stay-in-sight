@@ -1,0 +1,7 @@
+node_modules
+.wrangler
+.dev.vars
+dist
+tenants/*.env
+!tenants/example.env
+tenants/.build

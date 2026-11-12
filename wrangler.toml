@@ -1,0 +1,33 @@
+name = "cms-outbound"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Send due emails, sync replies, retry webhooks, renew Gmail watches.
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cms-outbound"
+# From `npx wrangler d1 create cms-outbound` (deploy:tenant looks it up by name)
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[vars]
+# Public URL of this worker, used for the tracking pixel, unsubscribe links and OAuth redirect.
+# Leave empty to auto-detect from the first request you make to the UI.
+PUBLIC_URL = ""
+# Optional: Pub/Sub topic for instant Gmail reply notifications, e.g. "projects/my-proj/topics/gmail-outbound".
+# Without it, replies are picked up by polling once a minute.
+GMAIL_PUBSUB_TOPIC = ""
+# Max emails sent per cron tick (per minute) across all mailboxes.
+SEND_BATCH = "20"
+# Default OpenRouter model for categorizing replies (can be changed in the UI).
+OPENROUTER_MODEL = "openai/gpt-6-luna"
+
+# Secrets (set with `npx wrangler secret put NAME`):
+#   PASSCODE              - the one passcode for the UI, REST API and MCP
+#   GOOGLE_CLIENT_ID      - Google OAuth client (Web application)
+#   GOOGLE_CLIENT_SECRET
+#   OPENROUTER_API_KEY    - optional; enables AI reply categories
