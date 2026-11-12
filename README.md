@@ -1,4 +1,4 @@
-# cms-outbound
+# stay-in-sight
 
 Outbound email service on **Cloudflare Workers + D1 (SQLite)**.
 
