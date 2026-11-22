@@ -112,17 +112,14 @@ This URL goes into the tracking pixel, unsubscribe links and the Google redirect
 
 **6. Secrets**
 
-```bash
-openssl rand -base64 24          # a strong passcode, if you want one generated
-npx wrangler secret put PASSCODE
-npx wrangler secret put OPENROUTER_API_KEY
-```
+None are needed. The OpenRouter key, the Google client and the other settings are entered in the app (Settings), and
+the passcode is chosen by the first person who opens it. (A `PASSCODE` secret set with `npx wrangler secret put
+PASSCODE` still works, for older installs, and then can't be changed in the app.)
 
-Secrets apply immediately; no redeploy needed. The Google secrets come in Part 2.
+**7. Set up and sign in**
 
-**7. Sign in**
-
-Open your URL and sign in with the passcode. Mailboxes will warn that Google isn't configured yet; that's next.
+Open your URL: the first visit shows **Set up**, where you choose the passcode (at least 12 characters). It's the
+sign-in for the app and the Bearer token for the API and MCP; change it later on the **MCP & API** page. Mailboxes will warn that Google isn't configured yet; that's next.
 
 ---
 

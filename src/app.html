@@ -2491,7 +2491,7 @@
     { title: 'Gmail push (Pub/Sub)', sub: 'Instant reply detection. Without a topic, Gmail is checked every minute.', keys: ['GMAIL_PUBSUB_TOPIC'], extra: (c) => `<div class="small muted" style="margin-top:6px">Push subscription endpoint:</div>${copyField(c.gmail_push_endpoint)}<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button type="button" class="sm" id="regenPush">${icon('refresh')}Regenerate token</button><span class="small muted" id="watchStatus"></span></div>` },
     { title: 'AWS SES events (SNS)', sub: 'Bounces and complaints from SES mailboxes. Subscribe an SNS topic to this HTTPS endpoint; the app confirms it and checks every message is signed by AWS.', keys: [], extra: (c) => `${copyField(c.ses_webhook_endpoint)}<div class="small muted">${c.ses_sns ? `Subscribed to <span class="mono">${esc(c.ses_sns.topic)}</span> on ${fmt(c.ses_sns.confirmed_at)}.` : 'No SNS subscription confirmed yet.'}${c.ses_last_event ? ` Last event: ${esc(c.ses_last_event.type)} ${rel(c.ses_last_event.at)}.` : ''}</div>` },
     { title: 'AI reply categories', sub: 'OpenRouter key for the categorizer.', keys: ['OPENROUTER_API_KEY'], extra: () => `<div class="small muted" style="margin-top:8px">Model, outreach context and categories are on <a href="#categories">Reply categories</a>.</div>` },
-    { title: 'Sending and links', sub: '', keys: ['SEND_BATCH', 'PUBLIC_URL'], extra: () => `<div class="limits-note" style="margin-top:12px">${icon('alert')}<div>The <b>passcode</b> can only be set at deploy time. Changing it signs everyone out of the app; the push endpoint is not affected.</div></div>` },
+    { title: 'Sending and links', sub: '', keys: ['SEND_BATCH', 'PUBLIC_URL'], extra: () => `<div class="limits-note" style="margin-top:12px">${icon('alert')}<div>The <b>passcode</b> is changed on the <b>MCP &amp; API</b> page.</div></div>` },
   ];
   function settingRow(f) {
     const ph = f.secret
@@ -3175,6 +3175,8 @@
     const cfg = state.config || (state.config = await api('/config'));
     const mcpJson = JSON.stringify({ mcpServers: { outbound: { type: 'http', url: cfg.mcp_url, headers: { Authorization: 'Bearer <PASSCODE>' } } } }, null, 2);
     $('#settingsInfo').innerHTML = `
+      ${cfg.passcode_in_app ? `<div class="card card-pad"><h2>Passcode</h2><p class="sub">The Bearer token for the API and MCP, and the sign-in for this app. Changing it doesn't sign anyone out of the app, but scripts and MCP clients need the new one.</p>
+        <form id="passcode-form" class="row" style="gap:8px;flex-wrap:wrap"><input type="password" name="passcode" minlength="12" placeholder="New passcode (at least 12 characters)" autocomplete="new-password" required style="flex:1;min-width:220px"><button class="btn primary" type="submit">Change passcode</button></form></div>` : ''}
       <div class="card card-pad"><h2>MCP server</h2><p class="sub">Streamable HTTP. Send <span class="mono">Authorization: Bearer &lt;PASSCODE&gt;</span>, or add <span class="mono">?key=&lt;PASSCODE&gt;</span> for clients that only accept a URL.</p>
         ${copyField(cfg.mcp_url)}
         <div class="section-title">Claude Code</div>${codeBlock(`claude mcp add --transport http outbound ${cfg.mcp_url} --header "Authorization: Bearer <PASSCODE>"`)}
@@ -3190,6 +3192,16 @@
           <div>Status: ${cfg.google_configured ? '<span class="pill pill-green"><i></i>Configured</span>' : '<span class="pill pill-red"><i></i>Client ID or secret missing</span>'}</div></div>
       </div>`;
   }
+  document.addEventListener('submit', async (ev) => {
+    if (ev.target.id !== 'passcode-form') return;
+    ev.preventDefault();
+    const input = ev.target.elements.passcode;
+    try {
+      await api('/passcode', { method: 'POST', body: { passcode: input.value } });
+      input.value = '';
+      alert('Passcode changed. Use the new one for the API and MCP.');
+    } catch (e) { alert(e.message || 'Could not change the passcode.'); }
+  });
   document.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-copy]');
     if (!b) return;

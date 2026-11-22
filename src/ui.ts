@@ -35,10 +35,22 @@ export const loginPage = (error?: string, appName = DEFAULT_APP_NAME, next = '/'
   shell(
     `${escapeHtml(appName)} · Sign in`,
     `<div class="brand"><span class="mark">${MARK}</span>${escapeHtml(appName)}</div>
-     <div class="card"><h1>Sign in</h1><p>Enter the passcode set when this instance was deployed.</p>
+     <div class="card"><h1>Sign in</h1><p>Enter this app's passcode.</p>
      ${error ? `<div class="err">${escapeHtml(error)}</div>` : ''}
      <form method="post" action="/login">${next !== '/' ? `<input type="hidden" name="next" value="${escapeHtml(next)}">` : ''}<label for="pc">Passcode</label><input id="pc" type="password" name="passcode" autofocus autocomplete="current-password" required>
      <button type="submit">Sign in</button></form></div>`,
+  );
+
+/** First run: the first admin chooses the passcode for the app, the API and MCP. */
+export const setupPage = (error?: string, appName = DEFAULT_APP_NAME, min = 12) =>
+  shell(
+    `${escapeHtml(appName)} · Set up`,
+    `<div class="brand"><span class="mark">${MARK}</span>${escapeHtml(appName)}</div>
+     <div class="card"><h1>Set up</h1><p>Choose the passcode for this app. You'll use it to sign in, and as the key for the API and MCP. Everything else is set in the app.</p>
+     ${error ? `<div class="err">${escapeHtml(error)}</div>` : ''}
+     <form method="post" action="/setup"><label for="pc">Passcode</label><input id="pc" type="password" name="passcode" minlength="${min}" autofocus autocomplete="new-password" required>
+     <label for="pc2">Passcode again</label><input id="pc2" type="password" name="again" minlength="${min}" autocomplete="new-password" required>
+     <button type="submit">Set up</button></form></div>`,
   );
 
 export const unsubscribePage = (state: 'confirm' | 'done' | 'invalid', email?: string) =>

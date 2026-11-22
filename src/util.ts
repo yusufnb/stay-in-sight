@@ -1,6 +1,10 @@
 export interface Env {
   DB: D1Database;
-  PASSCODE: string;
+  /** Optional: a deploy-time passcode (older installs). Normally the first admin sets it in the app (auth.ts). */
+  PASSCODE?: string;
+  /** Filled in by withConfig from settings (auth.ts loadAuth). */
+  SESSION_SECRET?: string;
+  PASSCODE_HASH?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   PUBLIC_URL?: string;
@@ -9,6 +13,14 @@ export interface Env {
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
   APP_NAME?: string;
+  /** Set by the SleekSite platform when it runs this instance (src/platform.ts); absent when self-hosted. */
+  WORKSPACE_ID?: string;
+  CONTROLLER_URL?: string;
+  CONTROLLER_KEY?: string;
+  PLATFORM_DOMAIN?: string;
+  WORKSPACE_SUBDOMAIN?: string;
+  /** Runs the per-minute work on the platform, where there's no cron (src/scheduler.ts). */
+  SCHEDULER?: DurableObjectNamespace;
   /** The original Worker env, before app-saved settings were applied (see config.ts). */
   DEPLOY_ENV?: Env;
 }
@@ -119,7 +131,7 @@ export async function baseUrl(env: Env, reqUrl?: string): Promise<string> {
 export async function webhookToken(env: Env): Promise<string> {
   const stored = await getSetting(env, 'push_token');
   if (stored) return stored;
-  const seeded = (await hmacHex(env.PASSCODE, 'gmail-push')).slice(0, 32);
+  const seeded = (await hmacHex(env.PASSCODE || env.SESSION_SECRET!, 'gmail-push')).slice(0, 32);
   await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('push_token', ?)").bind(seeded).run();
   return (await getSetting(env, 'push_token')) || seeded;
 }

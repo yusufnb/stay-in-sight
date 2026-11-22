@@ -1,0 +1,25 @@
+{
+  "id": "stay-in-sight",
+  "name": "Stay in Sight",
+  "home": "/",
+  "resources": {
+    "d1": {
+      "binding": "DB"
+    },
+    "durable_objects": [
+      {
+        "binding": "SCHEDULER",
+        "class": "Scheduler"
+      }
+    ]
+  },
+  "alarm": {
+    "class": "Scheduler",
+    "every": "1m"
+  },
+  "egress": "any",
+  "payments": "none",
+  "release": {
+    "config": "wrangler.toml"
+  }
+}

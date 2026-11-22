@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { deleteCookie, setCookie } from 'hono/cookie';
-import { checkPasscode, makeSession, requireAuth, SESSION_COOKIE } from './auth';
+import { checkPasscode, isAuthed, isSetUp, makeSession, PASSCODE_MIN, requireAuth, SESSION_COOKIE, setPasscode } from './auth';
 import { exchangeCode, googleAuthUrl } from './google';
 import { handleMcp } from './mcp';
 import { processDue, sendReply } from './sender';
@@ -18,11 +18,13 @@ import * as cat from './categorize';
 import { DEFAULT_APP_NAME, withConfig } from './config';
 import { readSettings, saveSettings } from './settings';
 import { applyCategory, deliverWebhooks, handlePush, recategorize, renewWatches, syncAll, syncMailbox } from './sync';
-import { loginPage, appPage, safeNext, unsubscribePage } from './ui';
+import { loginPage, appPage, safeNext, setupPage, unsubscribePage } from './ui';
 import { openApiSpec, swaggerPage } from './openapi';
 import { baseUrl, Env, getSetting, hmacHex, HttpError, now, regenerateWebhookToken, safeEqual, sesWebhookToken, webhookToken } from './util';
 import { handleInboundEmail } from './inbound';
 import { handleSesWebhook } from './ses-events';
+import { onPlatform, platformRoutes, STORAGE_FULL, storageFull } from './platform';
+export { Scheduler } from './scheduler';
 
 type App = { Bindings: Env };
 const app = new Hono<App>();
@@ -36,14 +38,41 @@ app.onError((err, c) => {
 // ---------------- Public ----------------
 
 app.get('/health', (c) => c.json({ ok: true }));
+// The SleekSite platform: health check, sign-in from its console, and its calls in (src/platform.ts).
+app.route('/', platformRoutes);
 
 const appName = (env: Env) => env.APP_NAME?.trim() || DEFAULT_APP_NAME;
 
-app.get('/login', (c) => c.html(loginPage(undefined, appName(c.env), safeNext(c.req.query('next')))));
+app.get('/login', (c) => (isSetUp(c.env) ? c.html(loginPage(undefined, appName(c.env), safeNext(c.req.query('next')))) : c.redirect('/setup')));
+
+// First run: the first admin chooses the passcode. On the SleekSite platform, only someone who came in from its
+// console (and so already has a session here) can do this; self-hosted, the first visitor does.
+const mayDoSetup = async (c: Parameters<typeof isAuthed>[0]) => !onPlatform(c.env) || (await isAuthed(c));
+const sessionCookie = (url: string) => ({ httpOnly: true, secure: new URL(url).protocol === 'https:', sameSite: 'Lax' as const, path: '/', maxAge: 30 * 24 * 3600 });
+app.get('/setup', async (c) => {
+  if (isSetUp(c.env)) return c.redirect('/login');
+  if (!(await mayDoSetup(c))) return c.text('Open this app from your SleekSite console to set it up.', 403);
+  return c.html(setupPage(undefined, appName(c.env), PASSCODE_MIN));
+});
+app.post('/setup', async (c) => {
+  if (isSetUp(c.env)) return c.redirect('/login');
+  if (!(await mayDoSetup(c))) return c.text('Open this app from your SleekSite console to set it up.', 403);
+  const form = await c.req.parseBody();
+  const pc = String(form.passcode || ''), again = String(form.again || '');
+  if (pc !== again) return c.html(setupPage('The two passcodes are different.', appName(c.env), PASSCODE_MIN), 400);
+  try {
+    await setPasscode(c.env, pc);
+  } catch (e) {
+    return c.html(setupPage((e as Error).message, appName(c.env), PASSCODE_MIN), 400);
+  }
+  setCookie(c, SESSION_COOKIE, await makeSession(c.env), sessionCookie(c.req.url));
+  await baseUrl(c.env, c.req.url);
+  return c.redirect('/');
+});
 app.post('/login', async (c) => {
   const form = await c.req.parseBody();
   const next = safeNext(form.next);
-  if (!checkPasscode(c.env, String(form.passcode || ''))) return c.html(loginPage('Wrong passcode', appName(c.env), next), 401);
+  if (!(await checkPasscode(c.env, String(form.passcode || '')))) return c.html(loginPage('Wrong passcode', appName(c.env), next), 401);
   setCookie(c, SESSION_COOKIE, await makeSession(c.env), {
     httpOnly: true,
     secure: new URL(c.req.url).protocol === 'https:',
@@ -103,11 +132,11 @@ app.post('/u/:token', async (c) => {
 // OAuth state = "<exp>.<hmac>" so the callback can be public.
 async function makeState(env: Env) {
   const exp = now() + 15 * 60_000;
-  return `${exp}.${(await hmacHex(env.PASSCODE, `oauth:${exp}`)).slice(0, 32)}`;
+  return `${exp}.${(await hmacHex(env.SESSION_SECRET!, `oauth:${exp}`)).slice(0, 32)}`;
 }
 async function checkState(env: Env, state: string) {
   const [exp, sig] = state.split('.');
-  return !!exp && Number(exp) > now() && safeEqual(sig || '', (await hmacHex(env.PASSCODE, `oauth:${exp}`)).slice(0, 32));
+  return !!exp && Number(exp) > now() && safeEqual(sig || '', (await hmacHex(env.SESSION_SECRET!, `oauth:${exp}`)).slice(0, 32));
 }
 
 app.get('/oauth/google/start', requireAuth('page'), async (c) => {
@@ -188,6 +217,18 @@ const id = (v: string) => {
   return n;
 };
 
+// Change the passcode (API and MCP key, and the sign-in). Not for a passcode set at deploy time.
+api.post('/passcode', async (c) => {
+  if (c.env.PASSCODE) throw new HttpError(409, 'This passcode was set at deploy time; change it there.');
+  const b = await c.req.json<{ passcode?: string }>().catch(() => ({} as { passcode?: string }));
+  try {
+    await setPasscode(c.env, String(b.passcode || ''));
+  } catch (e) {
+    throw new HttpError(400, (e as Error).message);
+  }
+  return c.json({ ok: true });
+});
+
 api.get('/config', async (c) => {
   const base = await baseUrl(c.env, c.req.url);
   return c.json({
@@ -196,6 +237,8 @@ api.get('/config', async (c) => {
     purposes: Object.fromEntries(PURPOSE_KEYS.map((k) => [k, PURPOSES[k]])),
     dnc_scopes: Object.fromEntries(DNC_SCOPES.map((k) => [k, DNC_SCOPE_LABELS[k]])),
     mcp_url: `${base}/mcp`,
+    // Set in the app (changeable on the MCP & API page), unless it was set at deploy time.
+    passcode_in_app: !c.env.PASSCODE,
     oauth_redirect_uri: `${base}/oauth/google/callback`,
     google_configured: !!(c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET),
     pubsub_topic: c.env.GMAIL_PUBSUB_TOPIC || null,
@@ -327,7 +370,10 @@ api.post('/contacts', async (c) => {
   const r = await contacts.saveContact(c.env, await c.req.json());
   return c.json(r, r.created ? 201 : 200);
 });
-api.post('/contacts/import', async (c) => c.json(await contacts.importContacts(c.env, await c.req.json())));
+api.post('/contacts/import', async (c) => {
+  if (await storageFull(c.env)) throw new HttpError(409, STORAGE_FULL);
+  return c.json(await contacts.importContacts(c.env, await c.req.json()));
+});
 api.post('/contacts/lists', async (c) => c.json(await contacts.setContactLists(c.env, await c.req.json())));
 api.post('/contacts/delete', async (c) => {
   const b = (await c.req.json()) as contacts.ContactSelection;
@@ -369,7 +415,7 @@ api.post('/run', async (c) => c.json(await runCron(c.env)));
 
 app.route('/api', api);
 
-async function runCron(env: Env) {
+export async function runCron(env: Env) {
   const out: Record<string, unknown> = {};
   const step = async (name: string, fn: () => Promise<unknown>) => {
     try {

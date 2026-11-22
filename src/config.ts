@@ -1,9 +1,10 @@
 import { Env, HttpError } from './util';
+import { loadAuth } from './auth';
 
 /**
  * Settings that can be changed in the app after deploy. A value saved in the app (settings table,
  * key "cfg:<NAME>") overrides the Worker var/secret of the same name; clearing it falls back to the
- * deploy-time value. PASSCODE is deliberately not here: it is the key to the app and stays deploy-only.
+ * deploy-time value (if any). The passcode isn't here: the first admin sets it on the setup page (auth.ts).
  */
 export interface ConfigField {
   key: ConfigKey;
@@ -81,7 +82,7 @@ async function loadOverrides(env: Env): Promise<Record<string, string>> {
 export async function withConfig(env: Env): Promise<Env> {
   try {
     const o = await loadOverrides(env);
-    return { ...env, ...o, DEPLOY_ENV: env } as Env;
+    return { ...env, ...o, ...(await loadAuth(env)), DEPLOY_ENV: env } as Env;
   } catch (err) {
     // Settings table missing (migrations not applied yet): run on deploy-time values.
     console.error('settings load failed', (err as Error).message);

@@ -21,7 +21,7 @@ Outbound email service on **Cloudflare Workers + D1 (SQLite)**.
 - **Threaded replies**: answer any sent email in the same thread (`In-Reply-To`/`References`, same Gmail thread) from the email's page, `POST /api/emails/:id/reply` or the MCP `reply_to_email` tool.
 - **UI** for scheduled/sent emails, replies, campaigns (sent / opened / replied / STOP rates), mailboxes, do-not-send.
 - **MCP endpoint** (`/mcp`, streamable HTTP) and a **REST API** (`/api`).
-- Everything is protected by **one passcode** set at deploy time (UI login, API Bearer token, MCP Bearer token).
+- Everything is protected by **one passcode** (UI login, API Bearer token, MCP Bearer token), chosen by the first person to open the app after deploy and changeable on the MCP & API page. Every other setting is set in the app too.
 
 ## Deploy
 
@@ -35,7 +35,7 @@ Outbound email service on **Cloudflare Workers + D1 (SQLite)**.
 npm install
 npx wrangler d1 create cms-outbound      # copy database_name + database_id into wrangler.toml
 npm run db:migrate                       # applies migrations/ to the remote D1
-npx wrangler secret put PASSCODE         # the passcode for UI, API and MCP
+# no secrets needed: the first person to open the app chooses the passcode (UI, API and MCP)
 ```
 
 Set `PUBLIC_URL` in `wrangler.toml` to the worker's URL (e.g. `https://cms-outbound.<you>.workers.dev` or a custom domain). It is used for the tracking pixel, unsubscribe links and the OAuth redirect. If left empty, the first URL you use to reach the UI/API is remembered.

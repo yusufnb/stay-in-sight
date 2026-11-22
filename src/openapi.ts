@@ -589,9 +589,18 @@ const paths: Record<string, Record<string, unknown>> = {
     put: op({
       tag: 'Settings',
       summary: 'Change app settings',
-      description: 'Values override the deploy-time ones; "" clears an app value. PASSCODE cannot be set here.',
+      description: 'Values override any deploy-time ones; "" clears an app value. The passcode is changed with POST /passcode.',
       body: body(obj(Object.fromEntries(['APP_NAME', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'OPENROUTER_API_KEY', 'GMAIL_PUBSUB_TOPIC', 'SEND_BATCH', 'PUBLIC_URL'].map((k) => [k, str()])))),
       res: json(obj({ changed: arr(str()), watch: freeform(), settings: arr(ref('Setting')) })),
+    }),
+  },
+  '/passcode': {
+    post: op({
+      tag: 'Settings',
+      summary: 'Change the passcode',
+      description: 'The passcode is the Bearer token for the API and MCP and the sign-in for the app. At least 12 characters. Sessions stay signed in. Not available when the passcode was set at deploy time.',
+      body: body(obj({ passcode: str() })),
+      res: json(obj({ ok: { type: 'boolean' } })),
     }),
   },
   '/settings/push-token': {
