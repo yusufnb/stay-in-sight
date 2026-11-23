@@ -19,6 +19,27 @@
   },
   "egress": "any",
   "payments": "none",
+  "products": [
+    {
+      "id": "stay-in-sight",
+      "name": "Stay in Sight",
+      "description": "Scheduled outbound email from your own Gmail or SES mailboxes: lists, templates, drip series, warm-up, reply tracking with AI categories, and an API and MCP server.",
+      "icon": "rocket",
+      "color": "teal",
+      "replaces": [
+        "Mailshake",
+        "Lemlist",
+        "Mailchimp"
+      ],
+      "variants": [
+        {
+          "id": "stay-in-sight-outbound",
+          "name": "Outbound",
+          "price": 19
+        }
+      ]
+    }
+  ],
   "release": {
     "config": "wrangler.toml"
   }
