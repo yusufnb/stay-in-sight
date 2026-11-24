@@ -1,6 +1,6 @@
 // Running as an app on the SleekSky platform (cf-controller: docs/app-auth.md, docs/site/tenant-api.md,
 // docs/site/runtime.md, docs/site/manifest.md). The controller deploys one instance per customer and sets APP_ID,
-// CONTROLLER_URL (the console, for browser redirects) and the SKY service binding; without APP_ID and SKY
+// CONSOLE_URL (the console, for browser redirects) and the SKY service binding; without APP_ID and SKY
 // nothing here applies and the app behaves as a self-hosted install (a cron every minute). Either way, the first admin
 // sets the passcode and every setting in the app after deploy.
 //
@@ -48,13 +48,13 @@ let info: { at: number; ttl: number; data: PlatformInfo | null } | null = null;
 let asking: Promise<void> | null = null;
 
 /**
- * What the platform says about this app (GET /api/tenant/init), cached per isolate for the TTL it gives (5 minutes).
+ * What the platform says about this app (GET /api/app/init), cached per isolate for the TTL it gives (5 minutes).
  * If the platform can't be reached, the last copy is kept (or none) and it's asked again after a minute.
  */
 export async function platformInfo(env: Env): Promise<PlatformInfo | null> {
   if (!onPlatform(env)) return null;
   if (!info || Date.now() - info.at > info.ttl * 1000) {
-    asking ??= skyFetch<PlatformInfo & { ttl?: number }>(env, '/api/tenant/init')
+    asking ??= skyFetch<PlatformInfo & { ttl?: number }>(env, '/api/app/init')
       .then((d) => { info = { at: Date.now(), ttl: Number(d.ttl) || 300, data: d }; })
       .catch((e) => {
         console.error('platform init', e);
@@ -86,11 +86,11 @@ const STATE_PATH = '/auth/platform';
 const appName = (env: Env) => env.APP_NAME?.trim() || DEFAULT_APP_NAME;
 
 platformRoutes.get('/auth/platform', (c) => {
-  if (!onPlatform(c.env) || !c.env.CONTROLLER_URL) return c.redirect('/login');
+  if (!onPlatform(c.env) || !c.env.CONSOLE_URL) return c.redirect('/login');
   const state = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
   const next = safeNext(c.req.query('next'));
   setCookie(c, STATE_COOKIE, `${state}.${next}`, { path: STATE_PATH, httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 600 });
-  const to = new URL('/auth', c.env.CONTROLLER_URL);
+  const to = new URL('/auth', c.env.CONSOLE_URL);
   to.search = new URLSearchParams({ app: c.env.APP_ID!, redirect: `${new URL(c.req.url).origin}${STATE_PATH}/callback`, state }).toString();
   c.header('cache-control', 'no-store');
   return c.redirect(to.toString());
@@ -113,7 +113,7 @@ platformRoutes.get('/auth/platform/callback', async (c) => {
   }
   // This app has one passcode and no user accounts: only the account's owners and staff come in.
   if (!who.owner && !who.staff) {
-    if (who.email) c.executionCtx.waitUntil(skyFetch(c.env, '/api/tenant/signins/remove', 'POST', { email: who.email }).catch((e) => console.error('signins/remove', e)));
+    if (who.email) c.executionCtx.waitUntil(skyFetch(c.env, '/api/app/signins/remove', 'POST', { email: who.email }).catch((e) => console.error('signins/remove', e)));
     return fail(`${who.email || 'That account'} can't use this app. Only the account's owners and staff can sign in.`, 403);
   }
   setCookie(c, SESSION_COOKIE, await makeSession(c.env), { path: '/', httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 30 * 24 * 3600 });

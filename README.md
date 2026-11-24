@@ -107,11 +107,11 @@ Changing `PASSCODE` signs out all UI sessions. The Gmail push URL has its own to
 
 ### On the SleekSky platform
 
-When the platform runs this app it sets `APP_ID`, `CONTROLLER_URL` (the console, for redirects) and the `SKY` service binding (src/platform.ts); without them the app is self-hosted and none of this applies.
+When the platform runs this app it sets `APP_ID`, `CONSOLE_URL` (the console, for redirects) and the `SKY` service binding (src/platform.ts); without them the app is self-hosted and none of this applies.
 
 - **Sign-in:** the login page also offers **Sign in with SleekSky** (`/auth/platform`, the manifest's `signin_path`). It goes to the console's `/auth`, comes back to `/auth/platform/callback` with a one-time code, and swaps it over `SKY` (`POST https://sky/auth/token`). The account's owners and staff get a session (and the first one chooses the passcode on `/setup`); anyone else is refused and removed from the app's sign-ins. The passcode still works for the UI, API and MCP.
 - **Schedule:** no cron. The `Scheduler` Durable Object runs the per-minute work on a 1-minute alarm; the manifest's 15-minute schedule (`POST /_platform/tick`) wakes it if it ever stops. `/_platform/*` is only reachable by the platform.
-- **Storage:** when the platform's `GET https://sky/api/tenant/init` says storage is `over` the plan's allowance, contact imports are refused.
+- **Storage:** when the platform's `GET https://sky/api/app/init` says storage is `over` the plan's allowance, contact imports are refused.
 
 ## MCP
 
