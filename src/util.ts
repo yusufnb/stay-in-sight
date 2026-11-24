@@ -20,7 +20,7 @@ export interface Env {
   /** The way to the platform API (https://sky/...); it knows which app is calling, so no key is sent. */
   SKY?: Fetcher;
   PLATFORM_DOMAIN?: string;
-  WORKSPACE_SUBDOMAIN?: string;
+  APP_SUBDOMAIN?: string;
   /** Runs the per-minute work on the platform, where there's no cron (src/scheduler.ts). */
   SCHEDULER?: DurableObjectNamespace;
   /** The original Worker env, before app-saved settings were applied (see config.ts). */
