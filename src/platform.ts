@@ -1,6 +1,6 @@
 // Running as an app on the SleekSky platform (cf-controller: docs/app-auth.md, docs/site/tenant-api.md,
-// docs/site/runtime.md, docs/site/manifest.md). The controller deploys one instance per customer and sets WORKSPACE_ID,
-// CONTROLLER_URL (the console, for browser redirects) and the SKY service binding; without WORKSPACE_ID and SKY
+// docs/site/runtime.md, docs/site/manifest.md). The controller deploys one instance per customer and sets APP_ID,
+// CONTROLLER_URL (the console, for browser redirects) and the SKY service binding; without APP_ID and SKY
 // nothing here applies and the app behaves as a self-hosted install (a cron every minute). Either way, the first admin
 // sets the passcode and every setting in the app after deploy.
 //
@@ -23,7 +23,7 @@ import { loginPage, safeNext } from './ui';
 import { DEFAULT_APP_NAME } from './config';
 import { Env, safeEqual } from './util';
 
-export const onPlatform = (env: Env) => !!(env.WORKSPACE_ID && env.SKY);
+export const onPlatform = (env: Env) => !!(env.APP_ID && env.SKY);
 
 /** A call to the platform API over SKY. Throws with the platform's `{ error }` message when it fails. */
 export async function skyFetch<T = Record<string, unknown>>(env: Env, path: string, method = 'GET', body?: unknown): Promise<T> {
@@ -91,7 +91,7 @@ platformRoutes.get('/auth/platform', (c) => {
   const next = safeNext(c.req.query('next'));
   setCookie(c, STATE_COOKIE, `${state}.${next}`, { path: STATE_PATH, httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 600 });
   const to = new URL('/auth', c.env.CONTROLLER_URL);
-  to.search = new URLSearchParams({ app: c.env.WORKSPACE_ID!, redirect: `${new URL(c.req.url).origin}${STATE_PATH}/callback`, state }).toString();
+  to.search = new URLSearchParams({ app: c.env.APP_ID!, redirect: `${new URL(c.req.url).origin}${STATE_PATH}/callback`, state }).toString();
   c.header('cache-control', 'no-store');
   return c.redirect(to.toString());
 });

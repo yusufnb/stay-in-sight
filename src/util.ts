@@ -14,7 +14,7 @@ export interface Env {
   OPENROUTER_MODEL?: string;
   APP_NAME?: string;
   /** Set by the SleekSky platform when it runs this instance (src/platform.ts); absent when self-hosted. */
-  WORKSPACE_ID?: string;
+  APP_ID?: string;
   /** The console's URL, for browser redirects (platform sign-in). */
   CONTROLLER_URL?: string;
   /** The way to the platform API (https://sky/...); it knows which app is calling, so no key is sent. */
