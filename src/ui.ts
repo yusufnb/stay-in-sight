@@ -31,12 +31,14 @@ const CHECK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" strok
 /** Only same-site paths, so a crafted link can't send people elsewhere after signing in. */
 export const safeNext = (v: unknown) => (typeof v === 'string' && /^\/(?![\/\\])/.test(v) ? v : '/');
 
-export const loginPage = (error?: string, appName = DEFAULT_APP_NAME, next = '/') =>
+/** `platform`: on SleekSky, account owners and staff sign in through the platform; the passcode still works too. */
+export const loginPage = (error?: string, appName = DEFAULT_APP_NAME, next = '/', platform = false) =>
   shell(
     `${escapeHtml(appName)} · Sign in`,
     `<div class="brand"><span class="mark">${MARK}</span>${escapeHtml(appName)}</div>
-     <div class="card"><h1>Sign in</h1><p>Enter this app's passcode.</p>
+     <div class="card"><h1>Sign in</h1>
      ${error ? `<div class="err">${escapeHtml(error)}</div>` : ''}
+     ${platform ? `<form method="get" action="/auth/platform">${next !== '/' ? `<input type="hidden" name="next" value="${escapeHtml(next)}">` : ''}<button type="submit">Sign in with SleekSky</button></form><p style="margin-top:18px">Or enter this app's passcode.</p>` : `<p>Enter this app's passcode.</p>`}
      <form method="post" action="/login">${next !== '/' ? `<input type="hidden" name="next" value="${escapeHtml(next)}">` : ''}<label for="pc">Passcode</label><input id="pc" type="password" name="passcode" autofocus autocomplete="current-password" required>
      <button type="submit">Sign in</button></form></div>`,
   );

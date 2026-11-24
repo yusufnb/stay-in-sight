@@ -13,10 +13,12 @@ export interface Env {
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
   APP_NAME?: string;
-  /** Set by the SleekSite platform when it runs this instance (src/platform.ts); absent when self-hosted. */
+  /** Set by the SleekSky platform when it runs this instance (src/platform.ts); absent when self-hosted. */
   WORKSPACE_ID?: string;
+  /** The console's URL, for browser redirects (platform sign-in). */
   CONTROLLER_URL?: string;
-  CONTROLLER_KEY?: string;
+  /** The way to the platform API (https://sky/...); it knows which app is calling, so no key is sent. */
+  SKY?: Fetcher;
   PLATFORM_DOMAIN?: string;
   WORKSPACE_SUBDOMAIN?: string;
   /** Runs the per-minute work on the platform, where there's no cron (src/scheduler.ts). */

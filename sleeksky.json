@@ -13,10 +13,14 @@
       }
     ]
   },
-  "alarm": {
-    "class": "Scheduler",
-    "every": "1m"
-  },
+  "schedules": [
+    {
+      "every": "15m",
+      "path": "/_platform/tick"
+    }
+  ],
+  "platform_signin": true,
+  "signin_path": "/auth/platform",
   "egress": "any",
   "payments": "none",
   "products": [

@@ -38,25 +38,25 @@ app.onError((err, c) => {
 // ---------------- Public ----------------
 
 app.get('/health', (c) => c.json({ ok: true }));
-// The SleekSite platform: health check, sign-in from its console, and its calls in (src/platform.ts).
+// The SleekSky platform: health check, platform sign-in, and its scheduled calls (src/platform.ts).
 app.route('/', platformRoutes);
 
 const appName = (env: Env) => env.APP_NAME?.trim() || DEFAULT_APP_NAME;
 
-app.get('/login', (c) => (isSetUp(c.env) ? c.html(loginPage(undefined, appName(c.env), safeNext(c.req.query('next')))) : c.redirect('/setup')));
+app.get('/login', (c) => (isSetUp(c.env) ? c.html(loginPage(undefined, appName(c.env), safeNext(c.req.query('next')), onPlatform(c.env))) : c.redirect('/setup')));
 
-// First run: the first admin chooses the passcode. On the SleekSite platform, only someone who came in from its
-// console (and so already has a session here) can do this; self-hosted, the first visitor does.
+// First run: the first admin chooses the passcode. On the SleekSky platform, only an account owner or staff member who
+// signed in through the platform (and so already has a session here) can do this; self-hosted, the first visitor does.
 const mayDoSetup = async (c: Parameters<typeof isAuthed>[0]) => !onPlatform(c.env) || (await isAuthed(c));
 const sessionCookie = (url: string) => ({ httpOnly: true, secure: new URL(url).protocol === 'https:', sameSite: 'Lax' as const, path: '/', maxAge: 30 * 24 * 3600 });
 app.get('/setup', async (c) => {
   if (isSetUp(c.env)) return c.redirect('/login');
-  if (!(await mayDoSetup(c))) return c.text('Open this app from your SleekSite console to set it up.', 403);
+  if (!(await mayDoSetup(c))) return c.redirect('/auth/platform?next=/setup');
   return c.html(setupPage(undefined, appName(c.env), PASSCODE_MIN));
 });
 app.post('/setup', async (c) => {
   if (isSetUp(c.env)) return c.redirect('/login');
-  if (!(await mayDoSetup(c))) return c.text('Open this app from your SleekSite console to set it up.', 403);
+  if (!(await mayDoSetup(c))) return c.redirect('/auth/platform?next=/setup');
   const form = await c.req.parseBody();
   const pc = String(form.passcode || ''), again = String(form.again || '');
   if (pc !== again) return c.html(setupPage('The two passcodes are different.', appName(c.env), PASSCODE_MIN), 400);
