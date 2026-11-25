@@ -11,10 +11,10 @@
 //   GET  /auth/platform            platform sign-in (manifest "signin_path"): off to the console's /auth
 //   GET  /auth/platform/callback   back with a one-time code; account owners and staff get a session here (then the
 //                                  setup page, where the first admin chooses the passcode, if there isn't one yet)
-//   POST /_platform/tick           manifest "schedules", every 15 minutes: makes sure the Scheduler's 1-minute alarm
+//   POST /_sky/tick           manifest "schedules", every 15 minutes: makes sure the Scheduler's 1-minute alarm
 //                                  is running
 //
-// The platform's dispatch Worker refuses outside requests to /_platform/*, so those routes need no token check.
+// The platform's dispatch Worker refuses outside requests to /_sky/*, so those routes need no token check.
 // Platform instances have no cron: the Scheduler Durable Object (src/scheduler.ts) runs the same work every minute.
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -123,7 +123,7 @@ platformRoutes.get('/auth/platform/callback', async (c) => {
   return c.redirect(next);
 });
 
-platformRoutes.post('/_platform/tick', async (c) => {
+platformRoutes.post('/_sky/tick', async (c) => {
   const scheduler = await (await ensureScheduler(c.env)).json();
   return c.json({ ok: true, scheduler });
 });

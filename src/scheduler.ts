@@ -1,6 +1,6 @@
 // On the SleekSky platform, apps have no cron triggers. This Durable Object does the same work as the self-hosted
 // cron (send what's due, sync replies, deliver webhooks, renew Gmail watches) on a 1-minute alarm. The manifest's
-// 15-minute schedule (POST /_platform/tick, sleeksky.json "schedules") wakes it, so the alarm is restarted if it ever
+// 15-minute schedule (POST /_sky/tick, sleeksky.json "schedules") wakes it, so the alarm is restarted if it ever
 // stops. Platform sign-in wakes it too.
 import type { Env } from './util';
 import { withConfig } from './config';

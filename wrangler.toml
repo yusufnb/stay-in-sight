@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 crons = ["* * * * *"]
 
 # On the SleekSky platform there's no cron: this Durable Object runs the same work on a 1-minute alarm, woken every
-# 15 minutes by the manifest's schedule (sleeksky.json, POST /_platform/tick).
+# 15 minutes by the manifest's schedule (sleeksky.json, POST /_sky/tick).
 [[durable_objects.bindings]]
 name = "SCHEDULER"
 class_name = "Scheduler"

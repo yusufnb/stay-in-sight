@@ -16,7 +16,7 @@
   "schedules": [
     {
       "every": "15m",
-      "path": "/_platform/tick"
+      "path": "/_sky/tick"
     }
   ],
   "platform_signin": true,
